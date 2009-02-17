@@ -74,7 +74,7 @@ function materialized_view_schema() {
         'description' => 'The maximum ID currently indexed for this content type and materialized view.',
       ),
     ),
-    'primary key' => array('mvid', 'entity'),
+    'primary key' => array('mvid', 'entity_type'),
   );
   
   // Supply the various materialized view schema for the sake of drupal_write_record().
