@@ -1,0 +1,148 @@
+<?php
+
+require 'materialized_view.class.inc';
+
+/**
+ * Implementation of hook_menu().
+ */
+function materialized_view_menu() {
+  $items = array();
+  
+  $items['admin/reports/materialized_view'] = array(
+    'title' => 'Materialized views',
+    'description' => 'Check the status of indexing on materialized views.',
+    'page callback' => 'materialized_view_status',
+    'access arguments' => array('access administration pages'),
+    'file' => 'materialized_view.admin.inc',
+    'file path' => drupal_get_path('module', 'materialized_view'),
+  );
+  
+  return $items;
+}
+
+/**
+ * Implementation of hook_exit().
+ */
+function materialized_view_exit() {
+  MVJobQueue::run();
+}
+
+/**
+ * Implementation of hook_cron().
+ */
+function materialized_view_cron() {
+  materialized_view_reconcile();
+  $batch_size = variable_get('mv_indexing_batch_size', 100);
+  $materialized_views = materialized_view_get();
+  foreach ($materialized_views as $materialized_view) {
+    $materialized_view->index($batch_size);
+  }
+}
+
+/**
+ * Check that all materialized views are registered for indexing
+ * and have up-to-date schema.
+ */
+function materialized_view_reconcile() {
+  // Load the list of materialized views.
+  $materialized_views = materialized_view_get();
+  
+  foreach ($materialized_views as $materialized_view) {
+    $materialized_view->verifySchema();
+  }
+  
+  // Remove tables and indexing data for views that no longer have registration.
+  $res = db_query('SELECT mvid FROM {materialized_view}');
+  while ($row = db_fetch_array($res)) {
+    if (!array_key_exists($row['mvid'], $materialized_views)) {
+    
+      // Create a dummy MV to "uninstall."
+      $materialized_view_to_drop = new MaterializedView($row['mvid']);
+      $materialized_view_to_drop->uninstallSchema();
+    }
+  }
+}
+
+/**
+ * Retrieve the array for an entity type by name
+ * or retrieve an array of all entity types. 
+ * 
+ * @param $name
+ *   The name of the entity type.
+ *   Pass NULL to get all entity types.
+ */
+function materialized_view_entity_type_get($name = NULL, $reset = FALSE) {
+  static $entity_types = NULL;
+  
+  // Check if the set of entity types is in the static cache.
+  if (is_null($entity_types) || $reset) {
+    $entity_types = module_invoke_all('entity_type_info');
+  }
+  
+  // Return just one entity object if a name was specified.
+  if (!is_null($name)) {
+    return $entity_types[$name];
+  }
+
+  return $entity_types;
+}
+
+/**
+ * Retrieve the object for a materialized view by name
+ * or retrieve an array of all materialized views. 
+ * 
+ * @param $name
+ *   The name of the materialized view.
+ *   Pass NULL to get all materialized views.
+ */
+function materialized_view_get($name = NULL, $reset = FALSE) {
+  static $materialized_views = NULL;
+  
+  // Check if the set of materialized views is in the static cache.
+  if (is_null($materialized_views) || $reset) {
+    $materialized_views = array();
+    $hook_results = module_invoke_all('materialized_view_info');
+    
+    // Loop through materialized views and load them into the cache,
+    // keyed by name.
+    foreach ($hook_results as $hook_result) {
+      $materialized_views[$hook_result->getName()] = $hook_result;
+    }
+  }
+  
+  // Return just one MV object if a name was specified.
+  if (!is_null($name)) {
+    return $materialized_views[$name];
+  }
+
+  return $materialized_views;
+}
+
+/**
+ * Implementation of hook_modules_enabled().
+ *
+ * This hook doesn't exist in D6.
+ */
+function materialized_view_modules_enabled($modules) {
+  materialized_view_reconcile();
+}
+
+/**
+ * Implementation of hook_modules_disabled(). This hook doesn't exist in D6.
+ *
+ * This hook doesn't exist in D6.
+ */
+function materialized_view_modules_disabled($modules) {
+  // Clean up MV tables from the disabled module(s).
+  foreach ($modules as $module) {
+    $function = $module . '_materialized_view_info';
+    if (function_exists($function)) {
+      $materialized_views = $function();
+      if (is_array($materialized_views)) {
+        foreach ($materialized_views as $materialized_view) {
+          $materialized_view->uninstallSchema();
+        }
+      }
+    }
+  }
+}

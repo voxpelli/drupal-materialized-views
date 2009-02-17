@@ -1,0 +1,20 @@
+<?php
+
+class MVTestCase extends DrupalWebTestCase {
+  function getInfo() {
+    return array(
+      'name'  => t('Materialized View tests'),
+      'description'  => t('Test Materialized Views API.'),
+      'group' => t('Materialized View'),
+    );
+  }
+
+  function setUp() {
+    parent::setUp('field_sql_storage', 'materialized_view');
+  }
+
+  function testBasicStaticFilter() {
+
+  }
+
+}

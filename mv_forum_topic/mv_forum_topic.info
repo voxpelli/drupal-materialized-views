@@ -1,0 +1,9 @@
+; $Id$
+name = Forum Topics
+package = Materialized View
+description = Demonstration module for using Materialized Views for Forum.
+core = 6.x
+version = VERSION
+dependencies[] = materialized_view
+dependencies[] = forum
+dependencies[] = mv_sources

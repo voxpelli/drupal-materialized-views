@@ -1,0 +1,89 @@
+<?php
+// $Id$
+
+/**
+ * Implementation of hook_install().
+ */
+function materialized_view_install() {
+  // Create module tables.
+  drupal_install_schema('materialized_view');
+  
+  // Create materialized view tables and bootstrap indexing.
+  // TK Can we permanently remove this?
+  // materialized_view_reconcile();
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function materialized_view_uninstall() {
+  // Remove all materialized view tables.
+  $materialized_views = materialized_view_get();
+  foreach ($materialized_views as $materialized_view) {
+    $materialized_view->uninstallSchema();
+  }
+
+  // Remove module tables.
+  drupal_uninstall_schema('materialized_view');
+}
+
+/**
+ * Implementation of hook_schema().
+ */
+function materialized_view_schema() {
+  $schema['materialized_view'] = array(
+    'description' => 'Stores information about materialized views.',
+    'fields' => array(
+      'mvid' => array(
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'description' => 'The primary identifier for a materialized view.',
+      ),
+      'schema_hash' => array(
+        'type' => 'char',
+        'length' => 40,
+        'not null' => TRUE,
+        'description' => 'SHA1 hash of the serialized schema array.',
+      ),
+    ),
+    'primary key' => array('mvid'),
+  );
+
+  $schema['materialized_view_indexing'] = array(
+    'description' => 'Stores information about the status of materialized view indexing.',
+    'fields' => array(
+      'mvid' => array(
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'description' => 'The primary identifier for a materialized view.',
+      ),
+      'entity_type' => array(
+        'type' => 'varchar',
+        'not null' => TRUE,
+        'length' => 64,
+        'default' => '',
+        'description' => 'The entity type being indexed.',
+      ),
+      'max_indexed_id' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The maximum ID currently indexed for this content type and materialized view.',
+      ),
+    ),
+    'primary key' => array('mvid', 'entity'),
+  );
+  
+  // Supply the various materialized view schema for the sake of drupal_write_record().
+  if (function_exists('materialized_view_get')) {
+    $materialized_views = materialized_view_get();
+    foreach ($materialized_views as $materialized_view) {
+      $schema[$materialized_view->getName()] = $materialized_view->getSchema();
+    }
+  }
+
+  return $schema;
+}

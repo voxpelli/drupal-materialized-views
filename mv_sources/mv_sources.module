@@ -1,0 +1,96 @@
+<?php
+
+/**
+ * Implementation of hook_entity_type_info().
+ */
+function materialized_view_entity_type_info() {
+  $types = array();
+  
+  $types['node'] = array(
+    'title' => t('Node'),
+    'id_table' => 'node',
+    'id_column' => 'nid',
+  );
+  
+  return $types;
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ */
+function materialized_view_nodeapi($node, $op) {
+  if ($op == 'insert' || $op == 'update') {
+    MVJobQueue::update('node', $node->nid);
+  }
+  else if ($op == 'delete') {
+    MVJobQueue::delete('node', $node->nid);
+  }
+}
+
+class MVNodeColumn extends MVColumn {
+  protected $column_name;
+
+  public function __construct($column_name) {
+    $this->column_name = $column_name;
+  }
+
+  public function getValue($entity_type, $entity_id) {
+    $node = (array) node_load($entity_id, array(), TRUE);
+    return $node[$this->column_name];
+  }
+
+  public function getSchema() {
+    $schema = drupal_get_schema_unprocessed('node', 'node');
+    return $schema['fields'][$this->column_name];
+  }
+
+  public function getName() {
+    return 'node_' . $this->column_name;
+  }
+}
+
+/*
+ * Provides an MV data source for the latest editing or comment activity on a node.
+ */
+class MVLastNodeActivityTimestamp extends MVColumn {
+  public function getValue($entity_type, $entity_id) {
+    $timestamp = db_result(db_query('SELECT MAX(c.timestamp) FROM {comments} c WHERE c.nid = %d', $entity_id));
+    if (!$timestamp) {
+      $timestamp = db_result(db_query('SELECT n.changed FROM {node} n WHERE n.nid = %d', $entity_id));
+    }
+    return $timestamp;
+  }
+
+  public function getSchema() {
+    $schema = drupal_get_schema_unprocessed('node', 'node');
+    return $schema['fields']['changed'];
+  }
+
+  public function getName() {
+    return 'last_node_activity';
+  }
+}
+
+/*
+ * Provides an MV data source for the terms associated with a node.
+ */
+class MVNodeTerms extends MVColumn {
+  public function getValue($entity_type, $entity_id) {
+    $node = node_load($entity_id);
+    $tids = array();
+    $res = db_query('SELECT tid FROM {term_node} WHERE vid = %d', $node->vid);
+    while ($row = db_fetch_array($res)) {
+      $tids[] = $row['tid'];
+    }
+    return $tids;
+  }
+
+  public function getSchema() {
+    $schema = drupal_get_schema_unprocessed('taxonomy', 'term_node');
+    return $schema['fields']['tid'];
+  }
+
+  public function getName() {
+    return 'node_tid';
+  }
+}

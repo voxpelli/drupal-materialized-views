@@ -1,0 +1,6 @@
+; $Id$
+name = Materialized View
+package = Materialized View
+description = Materializes defined views of fields for scalability.
+version = VERSION
+core = 6.x

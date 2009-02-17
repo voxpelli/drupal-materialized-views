@@ -1,0 +1,7 @@
+; $Id$
+name = Sources
+package = Materialized View
+description = Defines core data sources for materialized views.
+version = VERSION
+core = 6.x
+dependencies[] = materialized_view
