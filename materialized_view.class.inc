@@ -201,6 +201,8 @@ class MaterializedView {
     $ret = array();
     if (db_table_exists($this->name)) {
       db_drop_table($ret, $this->name);
+      db_query('DELETE FROM {materialized_view} WHERE mvid = "%s"', $this->getName());
+      db_query('DELETE FROM {materialized_view_indexing} WHERE mvid = "%s"', $this->getName());
     }
   }
   
