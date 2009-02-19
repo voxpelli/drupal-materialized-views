@@ -74,11 +74,9 @@ function _mv_drupalorg_node_by_vocabulary() {
   $mview->addDynamicFilter(new MVNodeVocabularies(), new MVEqualityOperator());
 
   // Sort by node ID, descending.
-  /*
   $sortset = new MVSortSet('nid');
   $sortset->addSort(new MVNodeColumn('nid'), MV_SORT_DESCENDING);
   $mview->addSortSet($sortset);
-  */
   
   // Sort by last activity.
   $sortset = new MVSortSet('last_activity');
