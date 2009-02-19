@@ -56,7 +56,7 @@ function _materialized_view_indexing_status() {
 
     // Index a batch from each entity type.
     foreach ($entity_types as $entity_type_name => $entity_type_info) {
-      $max_indexed_id = db_result(db_query('SELECT max_indexed_id FROM {materialized_view_indexing} WHERE entity_type = "%s"', $entity_type_name));
+      $max_indexed_id = db_result(db_query('SELECT max_indexed_id FROM {materialized_view_indexing} WHERE mvid = "%s" AND entity_type = "%s"', $materialized_view->getName(), $entity_type_name));
       
       if ($max_indexed_id == 1) {
         $max_indexed_id = t('None (indexing complete)');

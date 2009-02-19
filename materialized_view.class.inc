@@ -270,7 +270,7 @@ class MaterializedView {
     
     // Get indexing status for all entity types.
     $index_status = array();
-    $res = db_query('SELECT entity_type, max_indexed_id FROM {materialized_view_indexing}');
+    $res = db_query('SELECT entity_type, max_indexed_id FROM {materialized_view_indexing} WHERE mvid = "%s"', $this->getName());
     while ($row = db_fetch_array($res)) {
       if (array_key_exists($row['entity_type'], $entity_types)) {
         // Store the current indexing pointer with the entity type.

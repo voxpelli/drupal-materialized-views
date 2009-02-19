@@ -42,7 +42,14 @@ class MVNodeColumn extends MVColumn {
 
   public function getSchema() {
     $schema = drupal_get_schema_unprocessed('node', 'node');
-    return $schema['fields'][$this->column_name];
+    $field_schema = $schema['fields'][$this->column_name];
+
+    // Override type "serial"
+    if ($field_schema['type'] == 'serial') {
+      $field_schema['type'] = 'int';
+    }
+    
+    return $field_schema;
   }
 
   public function getName() {
@@ -79,6 +86,10 @@ class MVNodeTerms extends MVColumn {
   public function getValue($entity_type, $entity_id) {
     $node = node_load($entity_id);
     $tids = array();
+
+    // Add in a "zero" tid for as a sort of NULL.
+    $tids[] = 0;
+
     $res = db_query('SELECT tid FROM {term_node} WHERE vid = %d', $node->vid);
     while ($row = db_fetch_array($res)) {
       $tids[] = $row['tid'];
@@ -92,7 +103,7 @@ class MVNodeTerms extends MVColumn {
   }
 
   public function getName() {
-    return 'node_tid';
+    return 'term_tid';
   }
 }
 
@@ -100,6 +111,10 @@ class MVNodeVocabularies extends MVColumn {
   public function getValue($entity_type, $entity_id) {
     $node = node_load($entity_id);
     $vids = array();
+    
+    // Add in a "zero" vid for as a sort of NULL.
+    $vids[] = 0;
+    
     $res = db_query('SELECT DISTINCT td.vid FROM {term_node} tn INNER JOIN {term_data} td ON td.tid = tn.tid WHERE tn.vid = %d', $node->vid);
     while ($row = db_fetch_array($res)) {
       $vids[] = $row['vid'];
@@ -113,7 +128,7 @@ class MVNodeVocabularies extends MVColumn {
   }
 
   public function getName() {
-    return 'node_vid';
+    return 'term_vid';
   }
 }
 
@@ -129,5 +144,20 @@ class MVEntityType extends MVColumn {
 
   public function getName() {
     return 'entity_type';
+  }
+}
+
+class MVNodeCommentCount extends MVColumn {
+  public function getValue($entity_type, $entity_id) {
+    return db_result(db_query('SELECT comment_count FROM {node_comment_statistics} WHERE nid = %d', $entity_id));
+  }
+
+  public function getSchema() {
+    $schema = drupal_get_schema_unprocessed('comment', 'node_comment_statistics');
+    return $schema['fields']['comment_count'];
+  }
+
+  public function getName() {
+    return 'node_comment_count';
   }
 }

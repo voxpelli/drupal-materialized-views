@@ -6,7 +6,7 @@
 function mv_drupalorg_materialized_view_info() {
   $mviews = array();
   $mviews[] = _mv_drupalorg_node_by_term();
-  //$mviews[] = _mv_drupalorg_node_by_vocabulary();
+  $mviews[] = _mv_drupalorg_node_by_vocabulary();
   return $mviews;
 }
 
@@ -53,7 +53,8 @@ function _mv_drupalorg_node_by_term() {
   return $mview;
 }
 
-/* SELECT n.nid, n.title, l.comment_count
+/* Old:
+ * SELECT n.nid, n.title, l.comment_count
  * FROM node n
  * INNER JOIN term_node tn ON tn.vid = n.vid
  * INNER JOIN term_data td ON td.tid = tn.tid
@@ -62,33 +63,30 @@ function _mv_drupalorg_node_by_term() {
  * ORDER BY n.nid DESC LIMIT 0, 20
  */
 
-/*
-function _mv_drupalorg_vocabulary() {
-  $mview = new MaterializedView('mv_drupalorg_node_by_vocabulary');
+function _mv_drupalorg_node_by_vocabulary() {
+  $mview = new MaterializedView('mv_drupalorg_forum_by_comment_count');
   
   // Only include published nodes.
   $mview->addStaticFilter(new MVEntityType(), new MVEqualityOperator('node'));
   $mview->addStaticFilter(new MVNodeColumn('status'), new MVEqualityOperator(1));
 
-  // Prepare to filter by term IDs at runtime.
-  $mview->addDynamicFilter(new MVNodeTerms(), new MVEqualityOperator());  
+  // Prepare to filter by vocabulary IDs at runtime.
+  $mview->addDynamicFilter(new MVNodeVocabularies(), new MVEqualityOperator());
 
-  // Sort by stickiness, then last node activity, and finally thread creation timestamp.
-  $sortset = new MVSortSet('activity');
-  $sortset->addSort(new MVNodeColumn('sticky'), MV_SORT_DESCENDING);
-  $sortset->addSort(new MVLastNodeActivityTimestamp(), MV_SORT_DESCENDING);
-  $sortset->addSort(new MVNodeColumn('created'), MV_SORT_DESCENDING);
+  // Sort by node ID, descending.
+  /*
+  $sortset = new MVSortSet('nid');
+  $sortset->addSort(new MVNodeColumn('nid'), MV_SORT_DESCENDING);
   $mview->addSortSet($sortset);
+  */
   
-  // Sort by stickiness and then thread creation timestamp.
-  $sortset = new MVSortSet('creation');
-  $sortset->addSort(new MVNodeColumn('sticky'), MV_SORT_DESCENDING);
-  $sortset->addSort(new MVNodeColumn('created'), MV_SORT_DESCENDING);
+  // Sort by last activity.
+  $sortset = new MVSortSet('last_activity');
+  $sortset->addSort(new MVLastNodeActivityTimestamp(), MV_SORT_DESCENDING);
   $mview->addSortSet($sortset);
 
   return $mview;
 }
-*/
 
 /* SELECT r.tid, COUNT(n.nid) AS topic_count, SUM(l.comment_count) AS comment_count
  * FROM node n
