@@ -42,6 +42,7 @@ function _materialized_view_indexing_status() {
   $cols = array(
     t('Entity type'),
     t('Max indexed ID'),
+    t('Max ID'),
   );
 
   $materialized_views = materialized_view_get();
@@ -64,9 +65,14 @@ function _materialized_view_indexing_status() {
         $max_indexed_id = t('None (indexing has not started)');        
       }
       
+      $max_id_sql = 'SELECT MAX(' . db_escape_table($entity_type_info['id_column']) . ') FROM {' . db_escape_table($entity_type_info['id_table']) . '}';
+      $max_id = db_result(db_query($max_id_sql));
+
+      
       $rows[] = array(
         check_plain($entity_type_info['title']),
         $max_indexed_id,
+        $max_id,
       );
     }
     

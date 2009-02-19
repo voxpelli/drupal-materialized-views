@@ -294,7 +294,7 @@ class MaterializedView {
       
       if ($entity_type_info['max_indexed_id'] > 1) {
         // Fetch a batch of IDs to index.
-        $id_sql = 'SELECT t.' . db_escape_table($entity_type_info['id_column']) . ' AS id FROM {' . db_escape_table($entity_type_info['id_table']) . '} t WHERE t.' . db_escape_table($entity_type_info['id_column']) . ' < %d';
+        $id_sql = 'SELECT t.' . db_escape_table($entity_type_info['id_column']) . ' AS id FROM {' . db_escape_table($entity_type_info['id_table']) . '} t WHERE t.' . db_escape_table($entity_type_info['id_column']) . ' < %d ORDER BY t.' . db_escape_table($entity_type_info['id_column']) . ' DESC';
         $res = db_query_range($id_sql, $entity_type_info['max_indexed_id'], 0, $batch_size);
         
         $log_entry = 'Indexing up to ' . $batch_size . ' entities of type "' . $entity_type_name . '" with IDs under ' . $entity_type_info['max_indexed_id'] . '.';
