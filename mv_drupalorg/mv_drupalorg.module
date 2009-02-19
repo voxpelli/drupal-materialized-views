@@ -62,6 +62,7 @@ function _mv_drupalorg_node_by_term() {
  * ORDER BY n.nid DESC LIMIT 0, 20
  */
 
+/*
 function _mv_drupalorg_vocabulary() {
   $mview = new MaterializedView('mv_drupalorg_node_by_vocabulary');
   
@@ -87,6 +88,7 @@ function _mv_drupalorg_vocabulary() {
 
   return $mview;
 }
+*/
 
 /* SELECT r.tid, COUNT(n.nid) AS topic_count, SUM(l.comment_count) AS comment_count
  * FROM node n

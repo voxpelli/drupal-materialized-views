@@ -386,8 +386,6 @@ class MaterializedView {
       // Write the record to the database
       $schema = drupal_get_schema($this->name);
       
-      print_r($instance);
-      
       $success = drupal_write_record($this->name, $instance);
       if (!$success) {
         // TODO: Make translatable.
