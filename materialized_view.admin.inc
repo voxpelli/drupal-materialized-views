@@ -3,7 +3,9 @@
 function materialized_view_status() {
   $content = array();
 
-  $content[] = drupal_get_form('materialized_view_admin_ops_form');
+  $content[] = '<br/>';
+  //$content[] = drupal_get_form('materialized_view_admin_ops_form');
+  $content[] = _materialized_view_indexing_status();
 
   return implode("\n", $content);
 }
@@ -17,6 +19,43 @@ function materialized_view_admin_ops_form() {
   );
   
   return $form;
+}
+
+function _materialized_view_indexing_status() {
+  $content = array();
+
+  $cols = array(
+    t('Entity type'),
+    t('Max indexed ID'),
+  );
+
+  $materialized_views = materialized_view_get();
+  foreach ($materialized_views as $materialized_view) {
+    $content[] = '<h3>' . check_plain($materialized_view->getName()) . '</h3>';
+
+    // Get a list of all entity types.
+    $entity_types = materialized_view_entity_type_get();
+
+    $rows = array();
+
+    // Index a batch from each entity type.
+    foreach ($entity_types as $entity_type_name => $entity_type_info) {
+      $max_indexed_id = db_result(db_query('SELECT max_indexed_id FROM {materialized_view_indexing} WHERE entity_type = "%s"', $entity_type_name));
+      
+      if ($max_indexed_id == 1) {
+        $max_indexed_id = t('None (indexing complete)');
+      }
+      
+      $rows[] = array(
+        check_plain($entity_type_info['title']),
+        $max_indexed_id,
+      );
+    }
+    
+    $content[] = theme('table', $cols, $rows);
+  }
+
+  return implode("\n", $content);
 }
 
 function materialized_view_admin_ops_form_submit($form, &$form_state) {
