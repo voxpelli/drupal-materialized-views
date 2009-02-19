@@ -94,3 +94,39 @@ class MVNodeTerms extends MVColumn {
     return 'node_tid';
   }
 }
+
+class MVNodeVocabularies extends MVColumn {
+  public function getValue($entity_type, $entity_id) {
+    $node = node_load($entity_id);
+    $vids = array();
+    $res = db_query('SELECT DISTINCT td.vid FROM {term_node} tn INNER JOIN {term_data} td ON td.tid = tn.tid WHERE tn.vid = %d', $node->vid);
+    while ($row = db_fetch_array($res)) {
+      $vids[] = $row['vid'];
+    }
+    return $vids;
+  }
+
+  public function getSchema() {
+    $schema = drupal_get_schema_unprocessed('taxonomy', 'term_data');
+    return $schema['fields']['vid'];
+  }
+
+  public function getName() {
+    return 'node_vid';
+  }
+}
+
+class MVEntityType extends MVColumn {
+  public function getValue($entity_type, $entity_id) {
+    return $entity_type;
+  }
+
+  public function getSchema() {
+    $schema = drupal_get_schema_unprocessed('materialized_view', 'materialized_view_indexing');
+    return $schema['fields']['entity_type'];
+  }
+
+  public function getName() {
+    return 'entity_type';
+  }
+}

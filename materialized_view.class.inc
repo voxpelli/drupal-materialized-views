@@ -192,6 +192,9 @@ class MaterializedView {
     
     $this->uninstallSchema();
     db_create_table($ret, $this->name, $this->getSchema());
+
+    // Rebuild the schema cache.
+    drupal_get_schema(NULL, TRUE);
   }
   
   /**
@@ -220,7 +223,7 @@ class MaterializedView {
       if ($schema_hash != $installed_schema_hash) {
         $this->uninstallSchema();
         $this->installSchema();
-        
+                
         // Update the schema hash in the database.
         db_query('UPDATE {materialized_view} SET schema_hash = "%s" WHERE mvid = "%s"', $schema_hash, $this->getName());
 
@@ -352,6 +355,11 @@ class MaterializedView {
       'entity_type' => $entity_type,
       'entity_id' => $entity_id,
     );
+
+    // Get values for the extra columns
+    foreach ($this->extra_columns as $extra_columns) {
+      $write[$extra_columns->getName()] = $extra_columns->getValue($entity_type, $entity_id);
+    }
     
     // Get values for the sort columns
     foreach ($this->sort_sets as $sort_set) {
@@ -378,10 +386,12 @@ class MaterializedView {
       // Write the record to the database
       $schema = drupal_get_schema($this->name);
       
+      print_r($instance);
+      
       $success = drupal_write_record($this->name, $instance);
       if (!$success) {
         // TODO: Make translatable.
-        drupal_set_message('Updating the materialized view "' . check_plain($this->getName()) . '" failed.');
+        watchdog('mv', 'Updating the materialized view "' . check_plain($this->getName()) . '" failed:<pre>' . check_plain(print_r($instance, TRUE)) . '</pre>');
       }
     }
     
