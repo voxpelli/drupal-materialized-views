@@ -1,7 +1,7 @@
 ; $Id$
-name = Forum Topics
+name = Drupal.org
 package = Materialized View
-description = Demonstration module for using Materialized Views for Forum.
+description = Materialized views for Drupal.org.
 core = 6.x
 version = VERSION
 dependencies[] = materialized_view

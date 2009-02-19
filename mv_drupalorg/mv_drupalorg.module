@@ -3,10 +3,10 @@
 /*
  * Implementation of hook_materialized_view_info().
  */
-function mv_forum_topic_materialized_view_info() {
+function mv_drupalorg_materialized_view_info() {
   $mviews = array();
-  $mviews[] = _mv_node_by_term();
-  //$mviews[] = _mv_forum_vocabulary();
+  $mviews[] = _mv_drupalorg_node_by_term();
+  //$mviews[] = _mv_drupalorg_node_by_vocabulary();
   return $mviews;
 }
 
@@ -20,13 +20,13 @@ function mv_forum_topic_materialized_view_info() {
  *
  * New:
  * SELECT DISTINCT entity_id, node_sticky AS sticky, node_title AS title, node_created AS created
- * FROM mv_node_by_term
+ * FROM mv_drupalorg_node_by_term
  * WHERE node_tid IN (77)
  * ORDER BY node_sticky DESC, node_created DESC
  */
 
-function _mv_node_by_term() {
-  $mview = new MaterializedView('mv_node_by_term');
+function _mv_drupalorg_node_by_term() {
+  $mview = new MaterializedView('mv_drupalorg_node_by_term');
   
   // Only include published nodes.
   //$mview->addStaticFilter(new MVEntityType(), new MVEqualityOperator('node'));
@@ -62,8 +62,8 @@ function _mv_node_by_term() {
  * ORDER BY n.nid DESC LIMIT 0, 20
  */
 
-function _mv_forum_vocabulary() {
-  $mview = new MaterializedView('mv_forum_vocabulary');
+function _mv_drupalorg_vocabulary() {
+  $mview = new MaterializedView('mv_drupalorg_node_by_vocabulary');
   
   // Only include published nodes.
   $mview->addStaticFilter(new MVEntityType(), new MVEqualityOperator('node'));
