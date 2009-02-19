@@ -4,7 +4,7 @@ function materialized_view_status() {
   $content = array();
 
   $content[] = '<br/>';
-  //$content[] = drupal_get_form('materialized_view_admin_ops_form');
+  $content[] = drupal_get_form('materialized_view_admin_ops_form');
   $content[] = _materialized_view_indexing_status();
 
   return implode("\n", $content);
@@ -13,9 +13,24 @@ function materialized_view_status() {
 function materialized_view_admin_ops_form() {
   $form = array();
   
-  $form['reconcile'] = array(
+  $form['ops'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Operations'),
+  );
+  
+  $form['ops']['index'] = array(
     '#type' => 'submit',
-    '#value' => t('Reconcile now'),
+    '#value' => t('Run indexing batch'),
+  );
+
+  $form['ops']['reset_indexing'] = array(
+    '#type' => 'submit',
+    '#value' => t('Reset indexing'),
+  );
+
+  $form['ops']['reconcile'] = array(
+    '#type' => 'submit',
+    '#value' => t('Reconcile the schema'),
   );
   
   return $form;
@@ -45,6 +60,9 @@ function _materialized_view_indexing_status() {
       if ($max_indexed_id == 1) {
         $max_indexed_id = t('None (indexing complete)');
       }
+      else if (!$max_indexed_id) {
+        $max_indexed_id = t('None (indexing has not started)');        
+      }
       
       $rows[] = array(
         check_plain($entity_type_info['title']),
@@ -61,8 +79,16 @@ function _materialized_view_indexing_status() {
 function materialized_view_admin_ops_form_submit($form, &$form_state) {
   $op = $form_state['clicked_button']['#value'];
   
-  if ($op == t('Reconcile now')) {
+  if ($op == t('Reconcile the schema')) {
     materialized_view_reconcile();
     drupal_set_message('Materialized views reconciled.');
+  }
+  if ($op == t('Run indexing batch')) {
+    materialized_view_index();
+    drupal_set_message('Ran an indexing batch.');
+  }
+  if ($op == t('Reset indexing')) {
+    db_query('TRUNCATE {materialized_view_indexing}');
+    drupal_set_message('Indexing reset.');
   }
 }

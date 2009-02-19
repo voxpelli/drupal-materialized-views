@@ -31,6 +31,10 @@ function materialized_view_exit() {
  * Implementation of hook_cron().
  */
 function materialized_view_cron() {
+  //materialized_view_index();
+}
+
+function materialized_view_index() {
   materialized_view_reconcile();
   $batch_size = variable_get('mv_indexing_batch_size', 100);
   $materialized_views = materialized_view_get();
