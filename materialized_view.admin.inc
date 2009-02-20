@@ -15,7 +15,7 @@ function materialized_view_admin_ops_form() {
   
   $form['ops'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Operations'),
+    '#title' => t('Global materialized view operations'),
   );
   
   $form['ops']['index'] = array(
@@ -31,6 +31,11 @@ function materialized_view_admin_ops_form() {
   $form['ops']['reconcile'] = array(
     '#type' => 'submit',
     '#value' => t('Reconcile the schema'),
+  );
+
+  $form['ops']['drop_and_reinstall'] = array(
+    '#type' => 'submit',
+    '#value' => t('Drop and reinstall'),
   );
   
   return $form;
@@ -126,15 +131,27 @@ function materialized_view_admin_ops_form_submit($form, &$form_state) {
   $op = $form_state['clicked_button']['#value'];
   
   if ($op == t('Reconcile the schema')) {
-    materialized_view_reconcile();
-    drupal_set_message('Materialized views reconciled.');
+    $effect = materialized_view_reconcile();
+    if ($effect) {
+      drupal_set_message('Materialized views reconciled. Tables were affected.');
+    }
+    else {
+      drupal_set_message('Materialized views reconciled. No effect.');    
+    }
   }
-  if ($op == t('Run indexing batch')) {
+  else if ($op == t('Run indexing batch')) {
     materialized_view_index();
     drupal_set_message('Ran an indexing batch.');
   }
-  if ($op == t('Reset indexing')) {
+  else if ($op == t('Reset indexing')) {
     db_query('TRUNCATE {materialized_view_indexing}');
     drupal_set_message('Indexing reset.');
+  }
+  else if ($op == t('Drop and reinstall')) {
+    $materialized_views = materialized_view_get();
+    foreach ($materialized_views as $materialized_view) {
+      $materialized_view->installSchema();
+    }
+    drupal_set_message('Materialized views dropped and reinstalled.');
   }
 }

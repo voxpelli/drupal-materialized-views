@@ -9,15 +9,22 @@ function materialized_view_menu() {
   $items = array();
   
   $items['admin/reports/materialized_view'] = array(
-    'title' => 'Materialized views',
+    'title' => 'Materialized view status',
     'description' => 'Check the status of indexing on materialized views.',
     'page callback' => 'materialized_view_status',
-    'access arguments' => array('access administration pages'),
+    'access arguments' => array('administer materialized views'),
     'file' => 'materialized_view.admin.inc',
     'file path' => drupal_get_path('module', 'materialized_view'),
   );
   
   return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function materialized_view_perm() {
+  return array('administer materialized views');
 }
 
 /**
@@ -48,11 +55,16 @@ function materialized_view_index() {
  * and have up-to-date schema.
  */
 function materialized_view_reconcile() {
+  $effect = FALSE;
+
   // Load the list of materialized views.
   $materialized_views = materialized_view_get();
   
   foreach ($materialized_views as $materialized_view) {
-    $materialized_view->verifySchema();
+    if ($materialized_view->verifySchema()) {
+      watchdog('mv', '(Re)installed materialized view: ' . check_plain($materialized_view->getName()));
+      $effect = TRUE;
+    }
   }
   
   // Remove tables and indexing data for views that no longer have registration.
@@ -63,8 +75,14 @@ function materialized_view_reconcile() {
       // Create a dummy MV to "uninstall."
       $materialized_view_to_drop = new MaterializedView($row['mvid']);
       $materialized_view_to_drop->uninstallSchema();
+
+      watchdog('mv', 'Uninstalled materialized view: ' . check_plain($row['mvid']));
+      
+      $effect = TRUE;
     }
   }
+  
+  return $effect;
 }
 
 /**

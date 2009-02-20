@@ -187,14 +187,21 @@ class MaterializedView {
   /**
    * Install the schema for this materialized view.
    */
-  public function installSchema() {
-    $ret = array();
-    
+  public function installSchema() {    
+    // First, remove all data for this MV.
     $this->uninstallSchema();
-    db_create_table($ret, $this->name, $this->getSchema());
+    
+    // Generate and install the schema.
+    $ret = array();
+    $schema = $this->getSchema();
+    db_create_table($ret, $this->name, $schema);
 
     // Rebuild the schema cache.
     drupal_get_schema(NULL, TRUE);
+
+    // Add the schema hash to the database.
+    $schema_hash = sha1(serialize($schema));
+    db_query('INSERT INTO {materialized_view} (schema_hash, mvid) VALUES ("%s", "%s")', $schema_hash, $this->getName());
   }
   
   /**
@@ -205,6 +212,8 @@ class MaterializedView {
     if (db_table_exists($this->name)) {
       db_drop_table($ret, $this->name);
       db_query('DELETE FROM {materialized_view} WHERE mvid = "%s"', $this->getName());
+
+      // Reset all indexing by clearing all rows in the index tracker for this MV.
       db_query('DELETE FROM {materialized_view_indexing} WHERE mvid = "%s"', $this->getName());
     }
   }
@@ -213,48 +222,29 @@ class MaterializedView {
    * Verify that the installed schema is current. If not, update it.
    */
   public function verifySchema() {
+    $effect = FALSE;
+
     // Load the mview record from the database.
     $installed_schema_hash = db_result(db_query('SELECT schema_hash FROM {materialized_view} WHERE mvid = "%s"', $this->getName()));
     
     // Check that any schema for this MV are installed.
     if ($installed_schema_hash) {
-      // Check that schema are present and up-to-date.
       $schema_hash = sha1(serialize($this->getSchema()));
+      // Check that schema are present and up-to-date.
       if ($schema_hash != $installed_schema_hash) {
-        $this->uninstallSchema();
+        // On mismatch, (re)install the schema.
         $this->installSchema();
-                
-        // Update the schema hash in the database.
-        db_query('UPDATE {materialized_view} SET schema_hash = "%s" WHERE mvid = "%s"', $schema_hash, $this->getName());
-
-        // Reset all indexing by clearing all rows in the index tracker for this MV.
-        db_query('DELETE FROM {materialized_view_indexing} WHERE mvid = "%s"', $this->getName());
+        $effect = TRUE;
       }
     }
     else {
       // Install the schema for the first time.
       $this->installSchema();
-
-      // Update schema has in the database
-      $schema_hash = sha1(serialize($this->getSchema()));      
-      db_query('INSERT INTO {materialized_view} (schema_hash, mvid) VALUES ("%s", "%s")', $schema_hash, $this->getName());
+      $effect = TRUE;
     }
+    
+    return $effect;
   }
-  
-  /*
-  public function verifyIndexing() {
-
-    // Check that all entity types are registered
-    // for indexing against this view.
-    foreach ($entity_types as $entity_type_name => $entity_type_info) {
-      $index = new stdClass();
-      $index->mvid = $this->getName();
-      $index->entity_type = $entity_type_name;
-      $index->max_indexed_id = $entity_type_info['max_id'] + 1; 
-      @drupal_write_record('materialized_view_indexing', $index);
-    }
-  }
-  */
   
   /**
    * Index up to $batch_size items from each entity type.
