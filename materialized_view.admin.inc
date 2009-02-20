@@ -82,7 +82,7 @@ function _materialized_view_indexing_status() {
 
       $progress_width = 200;
       $green = round($ratio * $progress_width) ;
-      $percentage = '<strong>' . round($ratio * 100, 2) . '%</strong>';
+      $percentage = round($ratio * 100, 2) . '%';
 
       if ($ratio > .8) {
         $percentage_left = $percentage;
@@ -112,7 +112,7 @@ function _materialized_view_indexing_status() {
         ),
         array(
           'data' => $max_indexed_id,
-          'style' => 'width: 150px',
+          'style' => 'width: 250px',
         ),
         array(
           'data' => $max_id,
