@@ -30,7 +30,7 @@ function materialized_view_nodeapi($node, $op) {
 /**
  * Implementation of hook_comment().
  */
-function tracker2_comment($a1, $op) {
+function materialized_view_comment($a1, $op) {
   $comment = (array) $a1;
   switch ($op) {
     case 'insert':
