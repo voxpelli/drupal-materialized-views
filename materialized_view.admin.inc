@@ -112,11 +112,11 @@ function _materialized_view_indexing_status() {
         ),
         array(
           'data' => $max_indexed_id,
-          'style' => 'width: 75px',
+          'style' => 'width: 150px',
         ),
         array(
           'data' => $max_id,
-          'style' => 'width: 50px',
+          'style' => 'width: 75px',
         ),
       );
     }
