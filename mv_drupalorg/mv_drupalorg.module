@@ -64,7 +64,7 @@ function _mv_drupalorg_node_by_term() {
  */
 
 function _mv_drupalorg_node_by_vocabulary() {
-  $mview = new MaterializedView('mv_drupalorg_forum_by_comment_count');
+  $mview = new MaterializedView('mv_drupalorg_node_by_vocabulary');
   
   // Only include published nodes.
   $mview->addStaticFilter(new MVEntityType(), new MVEqualityOperator('node'));
