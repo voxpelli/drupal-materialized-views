@@ -41,6 +41,7 @@ function _materialized_view_indexing_status() {
 
   $cols = array(
     t('Entity type'),
+    t('Progress'),
     t('Max indexed ID'),
     t('Max ID'),
   );
@@ -58,21 +59,60 @@ function _materialized_view_indexing_status() {
     foreach ($entity_types as $entity_type_name => $entity_type_info) {
       $max_indexed_id = db_result(db_query('SELECT max_indexed_id FROM {materialized_view_indexing} WHERE mvid = "%s" AND entity_type = "%s"', $materialized_view->getName(), $entity_type_name));
       
-      if ($max_indexed_id == 1) {
-        $max_indexed_id = t('None (indexing complete)');
-      }
-      else if (!$max_indexed_id) {
-        $max_indexed_id = t('None (indexing has not started)');        
-      }
-      
+
       $max_id_sql = 'SELECT MAX(' . db_escape_table($entity_type_info['id_column']) . ') FROM {' . db_escape_table($entity_type_info['id_table']) . '}';
       $max_id = db_result(db_query($max_id_sql));
+      
+      if ($max_indexed_id == 1) {
+        $max_indexed_id = t('None (indexing complete)');
+        $ratio = 1;
+      }
+      else if (!$max_indexed_id) {
+        $max_indexed_id = t('None (indexing has not started)');
+        $ratio = 0;
+      }
+      else {
+        $ratio = (($max_id - $max_indexed_id) / $max_id);
+      }
 
+      $progress_width = 200;
+      $green = round($ratio * $progress_width) ;
+      $percentage = '<strong>' . round($ratio * 100, 2) . '%</strong>';
+
+      if ($ratio > .8) {
+        $percentage_left = $percentage;
+        $percentage_right = '';
+      }
+      else {
+        $percentage_left = '';
+        $percentage_right = $percentage;      
+      }
+
+      $progress = '';
+      if ($green > 0) {
+        $progress .= '<div style="float: left; padding-right: 5px; height: 20px; width: ' . $green . 'px; background-color: green; color: white; text-align: right;">' . $percentage_left . '</div>';
+      }
+      if ($progress_width - $green > 0) {
+        $progress .= '<div style="float: left; padding-left: 5px; height: 20px; width: ' . ($progress_width - $green) . 'px; background-color: #CCCCCC;">' . $percentage_right . '</div>';
+      }
       
       $rows[] = array(
-        check_plain($entity_type_info['title']),
-        $max_indexed_id,
-        $max_id,
+        array(
+          'data' => check_plain($entity_type_info['title']),
+          'style' => 'width: 100px',
+        ),
+        array(
+          'data' => $progress,
+          'style' => 'width: 210px',
+        ),
+        array(
+          'data' => $max_indexed_id,
+          'style' => 'width: 75px',
+        ),
+        array(
+          'data' => $max_id,
+          'style' => 'width: 50px',
+        ),
       );
     }
     
