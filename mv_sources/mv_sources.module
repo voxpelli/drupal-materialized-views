@@ -27,6 +27,21 @@ function materialized_view_nodeapi($node, $op) {
   }
 }
 
+/**
+ * Implementation of hook_comment().
+ */
+function tracker2_comment($a1, $op) {
+  $comment = (array) $a1;
+  switch ($op) {
+    case 'insert':
+    case 'update':
+    case 'publish':
+    case 'delete':
+    case 'unpublish':
+      MVJobQueue::update('node', $comment['nid']);
+  }
+}
+
 class MVNodeColumn extends MVColumn {
   protected $column_name;
 
