@@ -31,7 +31,7 @@ function materialized_view_exit() {
  * Implementation of hook_cron().
  */
 function materialized_view_cron() {
-  //materialized_view_index();
+  materialized_view_index();
 }
 
 function materialized_view_index() {
