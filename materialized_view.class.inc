@@ -466,6 +466,14 @@ final class MVJobQueue {
   }
 
   public static function run() {
+    // Don't do anything if no jobs are queued.
+    if (empty(self::$update_jobs) && empty(self::$deletion_jobs)) {
+      return;
+    }
+    
+    // Ensure the MV schema are up to date.
+    materialized_view_reconcile();
+  
     // Load the materialized views.
     $materialized_views = materialized_view_get();
   
