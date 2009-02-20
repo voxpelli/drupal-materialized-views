@@ -62,7 +62,6 @@ function materialized_view_reconcile() {
   
   foreach ($materialized_views as $materialized_view) {
     if ($materialized_view->verifySchema()) {
-      watchdog('mv', '(Re)installed materialized view: ' . check_plain($materialized_view->getName()));
       $effect = TRUE;
     }
   }
@@ -75,8 +74,6 @@ function materialized_view_reconcile() {
       // Create a dummy MV to "uninstall."
       $materialized_view_to_drop = new MaterializedView($row['mvid']);
       $materialized_view_to_drop->uninstallSchema();
-
-      watchdog('mv', 'Uninstalled materialized view: ' . check_plain($row['mvid']));
       
       $effect = TRUE;
     }

@@ -202,6 +202,8 @@ class MaterializedView {
     // Add the schema hash to the database.
     $schema_hash = sha1(serialize($schema));
     db_query('INSERT INTO {materialized_view} (schema_hash, mvid) VALUES ("%s", "%s")', $schema_hash, $this->getName());
+
+    watchdog('mv', 'Installed: ' . check_plain($this->getName()));
   }
   
   /**
@@ -211,11 +213,15 @@ class MaterializedView {
     $ret = array();
     if (db_table_exists($this->name)) {
       db_drop_table($ret, $this->name);
-      db_query('DELETE FROM {materialized_view} WHERE mvid = "%s"', $this->getName());
-
-      // Reset all indexing by clearing all rows in the index tracker for this MV.
-      db_query('DELETE FROM {materialized_view_indexing} WHERE mvid = "%s"', $this->getName());
     }
+
+    // Clear any record of the installed schema.
+    db_query('DELETE FROM {materialized_view} WHERE mvid = "%s"', $this->getName());
+
+    // Reset all indexing by clearing all rows in the index tracker for this MV.
+    db_query('DELETE FROM {materialized_view_indexing} WHERE mvid = "%s"', $this->getName());
+
+    watchdog('mv', 'Uninstalled: ' . check_plain($this->getName()));
   }
   
   /**
@@ -287,8 +293,9 @@ class MaterializedView {
         $id_sql = 'SELECT t.' . db_escape_table($entity_type_info['id_column']) . ' AS id FROM {' . db_escape_table($entity_type_info['id_table']) . '} t WHERE t.' . db_escape_table($entity_type_info['id_column']) . ' < %d ORDER BY t.' . db_escape_table($entity_type_info['id_column']) . ' DESC';
         $res = db_query_range($id_sql, $entity_type_info['max_indexed_id'], 0, $batch_size);
         
-        $log_entry = 'Indexing up to ' . $batch_size . ' entities of type "' . $entity_type_name . '" with IDs under ' . $entity_type_info['max_indexed_id'] . '.';
-        watchdog('mv_indexing', $log_entry);
+        // TODO: Make i18n.
+        $log_entry = 'Indexing "' . check_plain($entity_type_name) . '" with IDs under ' . check_plain($entity_type_info['max_indexed_id']) . '.';
+        watchdog('mv', $log_entry);
         
         // Index the IDs.
         while ($row = db_fetch_array($res)) {
