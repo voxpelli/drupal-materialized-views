@@ -187,7 +187,9 @@ class MaterializedView {
   /**
    * Install the schema for this materialized view.
    */
-  public function installSchema() {    
+  public function installSchema() {
+    // TODO: Remove the ability to trample existing, non-MV tables.
+  
     // First, remove all data for this MV.
     $this->uninstallSchema();
     
