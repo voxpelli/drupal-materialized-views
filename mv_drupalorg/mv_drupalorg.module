@@ -19,7 +19,7 @@ function mv_drupalorg_materialized_view_info() {
  * LIMIT 0, 25
  *
  * New:
- * SELECT DISTINCT entity_id, node_sticky AS sticky, node_title AS title, node_created AS created
+ * SELECT DISTINCT entity_id AS nid, node_sticky AS sticky, node_title AS title, node_created AS created
  * FROM mv_drupalorg_node_by_term
  * WHERE node_tid IN (77)
  * ORDER BY node_sticky DESC, node_created DESC
@@ -79,9 +79,12 @@ function _mv_drupalorg_node_by_vocabulary() {
   $mview->addSortSet($sortset);
   
   // Sort by last activity.
-  $sortset = new MVSortSet('last_activity');
-  $sortset->addSort(new MVLastNodeActivityTimestamp(), MV_SORT_DESCENDING);
+  $sortset = new MVSortSet('last_comment_timestamp');
+  $sortset->addSort(new MVNodeCommentStatistic('last_comment_timestamp'), MV_SORT_DESCENDING);
   $mview->addSortSet($sortset);
+
+  $mview->addExtraColumn(new MVNodeColumn('title'));
+  $mview->addExtraColumn(new MVNodeCommentStatistic('comment_count'));
 
   return $mview;
 }

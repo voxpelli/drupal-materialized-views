@@ -162,17 +162,23 @@ class MVEntityType extends MVColumn {
   }
 }
 
-class MVNodeCommentCount extends MVColumn {
+class MVNodeCommentStatistic extends MVColumn {
+  protected $column_name;
+
+  public function __construct($column_name) {
+    $this->column_name = $column_name;
+  }
+
   public function getValue($entity_type, $entity_id) {
-    return db_result(db_query('SELECT comment_count FROM {node_comment_statistics} WHERE nid = %d', $entity_id));
+    return db_result(db_query('SELECT ' . db_escape_table($this->column_name) . ' FROM {node_comment_statistics} WHERE nid = %d', $entity_id));
   }
 
   public function getSchema() {
     $schema = drupal_get_schema_unprocessed('comment', 'node_comment_statistics');
-    return $schema['fields']['comment_count'];
+    return $schema['fields'][$this->column_name];
   }
 
   public function getName() {
-    return 'node_comment_count';
+    return 'node_' . $this->column_name;
   }
 }
