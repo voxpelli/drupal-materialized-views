@@ -28,6 +28,10 @@ function materialized_view_admin_ops_form() {
     '#value' => t('Reconcile the schema'),
   );
 
+  $form['ops'][] = array(
+    '#value' => '&nbsp;&nbsp;&nbsp;',
+  );
+
   $form['ops']['reset_indexing'] = array(
     '#type' => 'submit',
     '#value' => t('Reset indexing'),
