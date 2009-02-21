@@ -23,14 +23,14 @@ function materialized_view_admin_ops_form() {
     '#value' => t('Run indexing batch'),
   );
 
-  $form['ops']['reset_indexing'] = array(
-    '#type' => 'submit',
-    '#value' => t('Reset indexing'),
-  );
-
   $form['ops']['reconcile'] = array(
     '#type' => 'submit',
     '#value' => t('Reconcile the schema'),
+  );
+
+  $form['ops']['reset_indexing'] = array(
+    '#type' => 'submit',
+    '#value' => t('Reset indexing'),
   );
 
   $form['ops']['drop_and_reinstall'] = array(
