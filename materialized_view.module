@@ -49,7 +49,6 @@ function materialized_view_cron() {
 }
 
 function materialized_view_index($batch_size = NULL) {
-  echo $batch_size;
   materialized_view_reconcile();
   if (!$batch_size) {
     $batch_size = variable_get('mv_indexing_batch_size', 100);
