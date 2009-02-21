@@ -17,6 +17,13 @@ function materialized_view_menu() {
     'file path' => drupal_get_path('module', 'materialized_view'),
   );
   
+  $items['cron/materialized_view/%'] = array(
+    'page callback' => 'materialized_view_index',
+    'page arguments' => array(2),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+  
   return $items;
 }
 
@@ -41,9 +48,12 @@ function materialized_view_cron() {
   materialized_view_index();
 }
 
-function materialized_view_index() {
+function materialized_view_index($batch_size = NULL) {
+  echo $batch_size;
   materialized_view_reconcile();
-  $batch_size = variable_get('mv_indexing_batch_size', 100);
+  if (!$batch_size) {
+    $batch_size = variable_get('mv_indexing_batch_size', 100);
+  }
   $materialized_views = materialized_view_get();
   foreach ($materialized_views as $materialized_view) {
     $materialized_view->index($batch_size);

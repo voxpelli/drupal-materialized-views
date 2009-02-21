@@ -33,7 +33,7 @@ function _mv_drupalorg_node_by_term() {
   $mview->addStaticFilter(new MVNodeColumn('status'), new MVEqualityOperator(1));
 
   // Prepare to filter by term IDs at runtime.
-  $mview->addDynamicFilter(new MVNodeTerms(), new MVEqualityOperator());  
+  $mview->addDynamicFilter(new MVNodeTerms(), new MVEqualityOperator());
 
   // Sort by stickiness, then last node activity, and finally thread creation timestamp.
   $sortset = new MVSortSet('activity');
