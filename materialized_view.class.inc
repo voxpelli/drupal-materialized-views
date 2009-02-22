@@ -264,8 +264,6 @@ class MaterializedView {
     // Get a list of all entity types.
     $entity_types = materialized_view_entity_type_get();
     
-    //db_query('INSERT INTO {materialized_view_indexing} VALUES ("mv_forum_topic", "node", 1)');
-    
     // Get indexing status for all entity types.
     $index_status = array();
     $res = db_query('SELECT entity_type, max_indexed_id FROM {materialized_view_indexing} WHERE mvid = "%s"', $this->getName());
