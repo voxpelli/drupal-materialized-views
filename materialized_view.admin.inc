@@ -72,7 +72,7 @@ function _materialized_view_indexing_status() {
       $max_id_sql = 'SELECT MAX(' . db_escape_table($entity_type_info['id_column']) . ') FROM {' . db_escape_table($entity_type_info['id_table']) . '}';
       $max_id = db_result(db_query($max_id_sql));
       
-      if ($max_indexed_id == 1) {
+      if ($max_indexed_id <= 1) {
         $max_indexed_id = t('None (indexing complete)');
         $ratio = 1;
       }
