@@ -19,6 +19,7 @@ function materialized_view_entity_type_info() {
  * Implementation of hook_nodeapi().
  */
 function materialized_view_nodeapi($node, $op) {
+  MVEntityCache::set('node', $node->nid, $node);
   if ($op == 'insert' || $op == 'update') {
     MVJobQueue::update('node', $node->nid);
   }
@@ -32,13 +33,17 @@ function materialized_view_nodeapi($node, $op) {
  */
 function materialized_view_comment($a1, $op) {
   $comment = (array) $a1;
+  MVEntityCache::set('comment', $comment['cid'], $comment);
   switch ($op) {
     case 'insert':
     case 'update':
     case 'publish':
-    case 'delete':
     case 'unpublish':
-      MVJobQueue::update('node', $comment['nid']);
+      MVJobQueue::update('comment', $comment['cid']);
+      return;
+    case 'delete':
+      MVJobQueue::delete('comment', $comment['cid']);
+      return;
   }
 }
 
@@ -53,6 +58,16 @@ class MVNodeColumn extends MVColumn {
     //$node = (array) node_load($entity_id, array(), TRUE);
     //return $node[$this->column_name];
     return db_result(db_query('SELECT ' . db_escape_table($this->column_name) . ' FROM {node} WHERE nid = %d', $entity_id));
+  }
+
+  public function getChangeMapping($entity_type, $entity_id) {
+    $changed = array();
+
+    if ($entity_type == 'node') {
+      $changed[$entity_type] = array($entity_id);
+    }
+    
+    return $changed;
   }
 
   public function getSchema() {
@@ -84,6 +99,21 @@ class MVLastNodeActivityTimestamp extends MVColumn {
     return $timestamp;
   }
 
+  public function getChangeMapping($entity_type, $entity_id) {
+    $changed = array();
+
+    if ($entity_type == 'node') {
+      // A change to a node only affects its own value.
+      $changed['node'] = array($entity_id);
+    }
+    else if ($entity_type == 'comment') {
+      // A change to a comment affects the value of the node it's attached to.
+      $changed['node'] = array(db_result(db_query('SELECT c.nid FROM {comments} c WHERE c.cid = %d', $entity_id)));
+    }
+    
+    return $changed;
+  }
+
   public function getSchema() {
     $schema = drupal_get_schema_unprocessed('node', 'node');
     return $schema['fields']['changed'];
@@ -112,6 +142,20 @@ class MVNodeTerms extends MVColumn {
     return $tids;
   }
 
+  public function getChangeMapping($entity_type, $entity_id) {
+    $changed = array();
+
+    if ($entity_type == 'node') {
+      // A change to a node only affects its own value.
+      $changed['node'] = array($entity_id);
+    }
+    else if ($entity_type == 'term') {
+      // TODO: Implement change propagation for terms.
+    }
+    
+    return $changed;
+  }
+  
   public function getSchema() {
     $schema = drupal_get_schema_unprocessed('taxonomy', 'term_node');
     return $schema['fields']['tid'];
@@ -137,6 +181,23 @@ class MVNodeVocabularies extends MVColumn {
     return $vids;
   }
 
+  public function getChangeMapping($entity_type, $entity_id) {
+    $changed = array();
+
+    if ($entity_type == 'node') {
+      // A change to a node only affects its own value.
+      $changed['node'] = array($entity_id);
+    }
+    else if ($entity_type == 'term') {
+      // TODO: Implement change propagation for terms.
+    }
+    else if ($entity_type == 'vocabulary') {
+      // TODO: Implement change propagation for vocabularies.
+    }
+    
+    return $changed;
+  }
+  
   public function getSchema() {
     $schema = drupal_get_schema_unprocessed('taxonomy', 'term_data');
     return $schema['fields']['vid'];
@@ -171,6 +232,23 @@ class MVNodeCommentStatistic extends MVColumn {
 
   public function getValue($entity_type, $entity_id) {
     return db_result(db_query('SELECT ' . db_escape_table($this->column_name) . ' FROM {node_comment_statistics} WHERE nid = %d', $entity_id));
+  }
+
+  public function getChangeMapping($entity_type, $entity_id) {
+    $changed = array();
+
+    if ($entity_type == 'node') {
+      // A change to a node only affects its own value.
+      $changed['node'] = array($entity_id);
+    }
+    else if ($entity_type == 'comment') {
+      $comment = MVEntityCache::get('comment', $entity_id, '_comment_load');
+      
+      // A change to a comment affects the value of the node it's attached to.
+      $changed['node'] = array($comment['nid']);
+    }
+    
+    return $changed;
   }
 
   public function getSchema() {

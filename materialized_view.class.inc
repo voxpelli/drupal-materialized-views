@@ -315,21 +315,65 @@ class MaterializedView {
   }
 
   /**
+   * Map changes using the active data sources and call updateMapped() to apply
+   * each mapped change.
+   *
+   * @param $entity_type.
+   *   The entity type.
+   * @param $entity_id.
+   *   The entity ID.
+   */
+  public function update($entity_type, $entity_id, $deletion_mode = FALSE) {
+    $mappings = array();
+    
+    // Allow each source to map the change to affected entity type/ID pairs.
+    foreach ($this->dynamic_filters as $source) {
+      $mappings = array_merge_recursive($mappings, $source->column->getChangeMapping($entity_type, $entity_id));
+    }
+    foreach ($this->static_filters as $source) {
+      $mappings = array_merge_recursive($mappings, $source->column->getChangeMapping($entity_type, $entity_id));
+    }
+    foreach ($this->extra_columns as $source) {
+      $mappings = array_merge_recursive($mappings, $source->getChangeMapping($entity_type, $entity_id));
+    }
+    
+    // TODO OPTIMIZATION: Only update the columns related to the change mappings.
+    
+    // In deletion mode, remove the actual deleted entity type/ID
+    // (if present) from the update set.
+    if ($deletion_mode && isset($mappings[$entity_type])) {
+      $key = array_search($entity_id, $mappings[$entity_type]);
+      if ($key !== FALSE) {
+        unset($mappings[$entity_type][$key]);
+      }
+    }
+    
+    // For each unique entity type and ID, run the update.
+    foreach ($mappings as $entity_type => $entity_ids) {
+      foreach (array_unique($entity_ids, SORT_NUMERIC) as $entity_id) {
+        $this->updateMapped($entity_type, $entity_id);
+      }
+    }
+  }
+
+  /**
    * Update an object in this materialized view or remove it
    * if it no longer meets criteria for inclusion.
    *
-   * @param $entity
-   *   The entity.
+   * @param $entity_type.
+   *   The entity type.
+   * @param $entity_id.
+   *   The entity ID.
    *
    * @returns A boolean value indicating whether the entity passed static filtering.
    */
-  public function update($entity_type, $entity_id) {
+  protected function updateMapped($entity_type, $entity_id) {
     // TODO: Start a transaction.
     
     // TODO OPTIMIZATION: Intelligently update rows instead of doing a DELETE+INSERT.
     
     // Delete the existing rows related to the object in the database.
-    $this->delete($entity_type, $entity_id);
+    $this->delete($entity_type, $entity_id, FALSE);
   
     // Loop through filters to determine if the updated object qualifies for inclusion.
     foreach ($this->static_filters as $static_filter) {
@@ -413,13 +457,18 @@ class MaterializedView {
    * @param $entity
    *   The entity.
    */
-  public function delete($entity_type, $entity_id) {
+  public function delete($entity_type, $entity_id, $run_updates = TRUE) {
     // Delete rows related to the object.
 
     $sql = 'DELETE FROM {' . db_escape_table($this->name) . '}
             WHERE entity_type = "%s" AND entity_id = %d';
     db_query($sql, $entity_type, $entity_id);
     $num_deleted = db_affected_rows();
+
+    // Apply updates to other items affected by the deletion.
+    if ($run_updates) {
+      $this->update($entity_type, $entity_id, TRUE);
+    }
     
     return $num_deleted;
   }
@@ -665,10 +714,40 @@ abstract class MVColumn {
    * Retreive the value to use for this column, given an entity typ[e
    * and entity ID.
    *
-   * @param $entity
-   *   The entity.
+   * @param $entity_type
+   *   The entity type.
+   * @param $entity_id
+   *   The entity ID.
    */
   abstract public function getValue($entity_type, $entity_id);
+
+  /**
+   * For the given entity type and ID arguments, return an array
+   * identifying types and IDs affected by the change. The default
+   * implementation below assumes the this column object does not
+   * aggregate data from other object types.
+   *
+   * A key example of why this function would be implemented differently
+   * is the node to comment relationship for a column calculating
+   * the timestamp of the most recent comment on a node. While
+   * getValue() would only be called for nodes, creating of editing a comment
+   * would potentially affect the value for each associated node. Thus,
+   * an "timestamp of the most recent comment on a node" subclass
+   * of MVColumn would return the associated node IDs for a given
+   * comment and an empty array for any other entity type.
+   *
+   * @param $entity_type
+   *   The entity type.
+   * @param $entity_id
+   *   The entity ID.
+   *
+   * @returns Mapping of types and IDs affected.
+   */
+  public function getChangeMapping($entity_type, $entity_id) {
+    $changed = array();
+    $changed[$entity_type] = array($entity_id);
+    return $changed;
+  }
   
   /**
    * Retrieve a column scheme suitable for use in $table['fields'].
@@ -683,4 +762,33 @@ abstract class MVColumn {
    * @returns A column name.
    */
   abstract public function getName();
+}
+
+class MVEntityCache {
+  protected static $entities = array();
+  
+  public static function set($entity_type, $entity_id, $entity) {
+    if (!isset(self::$entities[$entity_type])) {
+      self::$entities[$entity_type] = array();
+    }
+    
+    self::$entities[$entity_type][$entity_id] = $entity;
+  }
+  
+  public static function get($entity_type, $entity_id, $autoload = TRUE) {
+    if (isset(self::$entities[$entity_type][$entity_id])) {
+      return self::$entities[$entity_type][$entity_id];
+    }
+    
+    if ($autoload === FALSE) {
+      return FALSE;
+    }
+    
+    $load_function = $autoload;
+    if ($autoload === TRUE) {
+      $load_function = $entity_type . '_load';
+    }
+    self::$entities[$entity_type][$entity_id] = $load_function($entity_id);
+    return $entities[$entity_type][$entity_id];
+  }
 }
