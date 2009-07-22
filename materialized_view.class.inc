@@ -115,7 +115,9 @@ class MaterializedView {
     }
     
     if (empty($this->sort_sets)) {
-      $indexes['mv_base'] = $base_index;
+      if (!empty($base_index)) {
+        $indexes['mv_base'] = $base_index;
+      }
     }
     else {    
       foreach ($this->sort_sets as $sort_set) {

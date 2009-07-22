@@ -1,0 +1,8 @@
+; $Id$
+name = Views integration
+description = Exposes Views to the Materialized View system.
+package = Materialized View
+core = 6.x
+version = VERSION
+dependencies[] = materialized_view
+dependencies[] = views

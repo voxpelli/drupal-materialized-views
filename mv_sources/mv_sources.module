@@ -55,9 +55,8 @@ class MVNodeColumn extends MVColumn {
   }
 
   public function getValue($entity_type, $entity_id) {
-    //$node = (array) node_load($entity_id, array(), TRUE);
-    //return $node[$this->column_name];
-    return db_result(db_query('SELECT ' . db_escape_table($this->column_name) . ' FROM {node} WHERE nid = %d', $entity_id));
+    $node = (array) MVEntityCache::get('node', $entity_id);
+    return $node[$this->column_name];
   }
 
   public function getChangeMapping($entity_type, $entity_id) {
@@ -107,8 +106,10 @@ class MVLastNodeActivityTimestamp extends MVColumn {
       $changed['node'] = array($entity_id);
     }
     else if ($entity_type == 'comment') {
+      $comment = MVEntityCache::get('comment', $entity_id, '_comment_load');
+      
       // A change to a comment affects the value of the node it's attached to.
-      $changed['node'] = array(db_result(db_query('SELECT c.nid FROM {comments} c WHERE c.cid = %d', $entity_id)));
+      $changed['node'] = array($comment['nid']);
     }
     
     return $changed;
