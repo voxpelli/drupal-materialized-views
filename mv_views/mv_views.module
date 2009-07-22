@@ -1,6 +1,42 @@
 <?php
 
 /*
+ * Implementation of hook_views_pre_execute().
+ */
+function mv_views_views_pre_execute(&$view) {
+  $table = 'mv_' . $view->current_display;
+  if (db_table_exists($table)) {
+    $mview = materialized_view_get($table);
+  
+    $sql = 'SELECT entity_id AS nid, mv.* FROM {' . $table . '} mv';
+
+    $view->build_info['count_query'] = $sql;
+
+    // Materialized Views for Views have up to one sort set. Load it.
+    $sort_sets = $mview->getSortSets();
+    if (!empty($sort_sets)) {
+      $sql_sorts = array();
+      
+      $sort_set = array_pop($sort_sets);
+      $sorts = $sort_set->getSorts();
+      foreach ($sorts as $sort) {
+        $sql_sort = $sort->column->getName();
+        if ($sort->direction == MV_SORT_DESCENDING) {
+          $sql_sort .= ' DESC';
+        }
+        $sql_sorts[] = $sql_sort;
+      }
+
+      $sql .= ' ORDER BY ' . implode(', ', $sql_sorts);
+    }
+
+    $view->build_info['query'] = $sql;
+  }
+  
+  dsm($view);
+}
+
+/*
  * Implementation of hook_menu().
  */
 function mv_views_menu() {
@@ -28,7 +64,10 @@ function mv_views_materialized_view_info() {
 
   $res = db_query('SELECT * FROM {views_display}');
   while ($views_display = db_fetch_object($res)) {
-    $views_display->display_options = unserialize($views_display->display_options);
+    $default_display_options = db_result(db_query('SELECT display_options FROM {views_display} WHERE id = "default" AND vid = %d', $views_display->vid));
+  
+    $views_display->display_options = unserialize($default_display_options) + unserialize($views_display->display_options);
+    
     $mview = mv_views_construct_mview($views_display);
     
     if ($mview !== FALSE) {
@@ -40,6 +79,8 @@ function mv_views_materialized_view_info() {
 }
 
 function mv_views_construct_mview($views_display) {
+
+
   $mview = new MaterializedView('mv_' . $views_display->id);
   
   // Restrict to nodes
@@ -48,6 +89,7 @@ function mv_views_construct_mview($views_display) {
   // Load filters, if any
   if (is_array($views_display->display_options['filters'])) {
     foreach ($views_display->display_options['filters'] as $name => $filter) {
+      // TODO: Make the conversion work with non-equality operators and exposed filters.
       if ($filter['operator'] != '=' || $filter['exposed']) {
         dsm($views_display);
         return FALSE;

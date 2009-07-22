@@ -141,6 +141,16 @@ class MaterializedView {
   }
   
   /**
+   * Gets the an array of the sort sets.
+   *
+   * @returns
+   *   An array of the sort sets.
+   */
+  public function getSortSets() {
+    return $this->sort_sets;
+  }
+
+  /**
    * Build the schema for the materialized view table.
    */
   public function getSchema() {
