@@ -362,7 +362,7 @@ class MaterializedView {
     
     // For each unique entity type and ID, run the update.
     foreach ($mappings as $entity_type => $entity_ids) {
-      foreach (array_unique($entity_ids, SORT_NUMERIC) as $entity_id) {
+      foreach (array_unique($entity_ids) as $entity_id) {
         $this->updateMapped($entity_type, $entity_id);
       }
     }
