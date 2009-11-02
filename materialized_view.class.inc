@@ -289,9 +289,10 @@ class MaterializedView {
         db_query('DELETE FROM {materialized_view_indexing} WHERE mvid = "%s" AND entity_type = "%s"', $this->getName(), $row['entity_type']);
       }
     }
-    
     // Index a batch from each entity type.
     foreach ($entity_types as $entity_type_name => $entity_type_info) {
+//    dsm($entity_type_info);
+
       // If there's no record of the maximum ID indexed, use one more than the current maximum.
       $existing_cursor = TRUE;
       if (!array_key_exists('max_indexed_id', $entity_type_info)) {
@@ -304,7 +305,7 @@ class MaterializedView {
         // Fetch a batch of IDs to index.
         $id_sql = 'SELECT t.' . db_escape_table($entity_type_info['id_column']) . ' AS id FROM {' . db_escape_table($entity_type_info['id_table']) . '} t WHERE t.' . db_escape_table($entity_type_info['id_column']) . ' < %d ORDER BY t.' . db_escape_table($entity_type_info['id_column']) . ' DESC';
         $res = db_query_range($id_sql, $entity_type_info['max_indexed_id'], 0, $batch_size);
-        
+ 
         // TODO: Make i18n.
         $log_entry = 'Indexing "' . check_plain($entity_type_name) . '" with IDs under ' . check_plain($entity_type_info['max_indexed_id']) . '.';
         watchdog('mv', $log_entry);
@@ -337,6 +338,7 @@ class MaterializedView {
    */
   public function update($entity_type, $entity_id, $deletion_mode = FALSE) {
     $mappings = array();
+
     
     // Allow each source to map the change to affected entity type/ID pairs.
     foreach ($this->dynamic_filters as $source) {
@@ -348,7 +350,6 @@ class MaterializedView {
     foreach ($this->extra_columns as $source) {
       $mappings = array_merge_recursive($mappings, $source->getChangeMapping($entity_type, $entity_id));
     }
-    
     // TODO OPTIMIZATION: Only update the columns related to the change mappings.
     
     // In deletion mode, remove the actual deleted entity type/ID
@@ -359,10 +360,14 @@ class MaterializedView {
         unset($mappings[$entity_type][$key]);
       }
     }
-    
+
+
     // For each unique entity type and ID, run the update.
     foreach ($mappings as $entity_type => $entity_ids) {
-      foreach (array_unique($entity_ids, SORT_NUMERIC) as $entity_id) {
+      $out = array_flip(array_flip($entity_ids));
+
+      if(sizeof($out)==0)continue;
+      foreach ($out as $entity_id) {
         $this->updateMapped($entity_type, $entity_id);
       }
     }
@@ -383,19 +388,16 @@ class MaterializedView {
     // TODO: Start a transaction.
     
     // TODO OPTIMIZATION: Intelligently update rows instead of doing a DELETE+INSERT.
-    
     // Delete the existing rows related to the object in the database.
     $this->delete($entity_type, $entity_id, FALSE);
-  
     // Loop through filters to determine if the updated object qualifies for inclusion.
     foreach ($this->static_filters as $static_filter) {
-    
+    	
       // Get the value of the column.
       $value = $static_filter->column->getValue($entity_type, $entity_id);
-      
+
       // Apply the operator
       if (!$static_filter->operator->apply($value)) {
-
         // Return if the entity does not meet static criteria.
         return FALSE;
       }
@@ -413,7 +415,6 @@ class MaterializedView {
     foreach ($this->extra_columns as $extra_columns) {
       $write[$extra_columns->getName()] = $extra_columns->getValue($entity_type, $entity_id);
     }
-    
     // Get values for the sort columns
     foreach ($this->sort_sets as $sort_set) {
       foreach ($sort_set->getSorts() as $sort) {
@@ -717,6 +718,29 @@ class MVEqualityOperator extends MVOperator {
 }
 
 /**
+ * Defines the inequality operator for use in static and dynamic filters.
+ */
+class MVInequalityOperator extends MVOperator {
+  protected $comparison_value = NULL;
+
+  public function __construct($value = NULL) {
+    $this->comparison_value = $value;
+  }
+
+  public function apply($value) {
+    return $value != $this->comparison_value;
+  }
+  
+  public function endsIndex() {
+    return FALSE;
+  }
+
+  public function indexable() {
+    return TRUE;
+  }
+}
+
+/**
  * Defines a column data source for use in materialized views.
  *
  * Subclass to define usable data sources.
@@ -801,6 +825,6 @@ class MVEntityCache {
       $load_function = $entity_type . '_load';
     }
     self::$entities[$entity_type][$entity_id] = $load_function($entity_id);
-    return $entities[$entity_type][$entity_id];
+    return self::$entities[$entity_type][$entity_id];
   }
 }
