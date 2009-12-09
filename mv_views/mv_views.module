@@ -4,7 +4,7 @@
  * Implementation of hook_views_pre_execute().
  */
 function mv_views_views_pre_execute(&$view) {
-  $table = 'mv_' . $view->current_display;
+  $table = 'mv_' . $view->name . '_' . $view->current_display;
   if (db_table_exists($table)) {
     $mview = materialized_view_get($table);
   
@@ -62,26 +62,23 @@ function mv_views_page() {
 function mv_views_materialized_view_info() {
   $mviews = array();
 
-  $res = db_query('SELECT * FROM {views_display}');
+  $res = db_query('SELECT v.name, vd.* FROM {views_view} v INNER JOIN {views_display} vd ON vd.vid = v.vid');
   while ($views_display = db_fetch_object($res)) {
     $default_display_options = db_result(db_query('SELECT display_options FROM {views_display} WHERE id = "default" AND vid = %d', $views_display->vid));
   
     $views_display->display_options = unserialize($default_display_options) + unserialize($views_display->display_options);
     
     $mview = mv_views_construct_mview($views_display);
-    
+
     if ($mview !== FALSE) {
       $mviews[] = $mview;
     }
   }
-
   return $mviews;
 }
 
 function mv_views_construct_mview($views_display) {
-
-
-  $mview = new MaterializedView('mv_' . $views_display->id);
+  $mview = new MaterializedView('mv_' . $views_display->name . '_' . $views_display->id);
   
   // Restrict to nodes
   $mview->addStaticFilter(new MVEntityType(), new MVEqualityOperator('node'));
