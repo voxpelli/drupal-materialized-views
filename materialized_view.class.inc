@@ -717,6 +717,29 @@ class MVEqualityOperator extends MVOperator {
 }
 
 /**
+ * Defines the inequality operator for use in static and dynamic filters.
+ */
+class MVInequalityOperator extends MVOperator {
+  protected $comparison_value = NULL;
+
+  public function __construct($value = NULL) {
+    $this->comparison_value = $value;
+  }
+
+  public function apply($value) {
+    return $value != $this->comparison_value;
+  }
+  
+  public function endsIndex() {
+    return TRUE;
+  }
+
+  public function indexable() {
+    return TRUE;
+  }
+}
+
+/**
  * Defines a column data source for use in materialized views.
  *
  * Subclass to define usable data sources.
@@ -801,6 +824,6 @@ class MVEntityCache {
       $load_function = $entity_type . '_load';
     }
     self::$entities[$entity_type][$entity_id] = $load_function($entity_id);
-    return $entities[$entity_type][$entity_id];
+    return self::$entities[$entity_type][$entity_id];
   }
 }
